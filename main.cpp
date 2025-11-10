@@ -28,10 +28,13 @@ int main() {
 
     while (running) {
 
-        
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == SDL_QUIT) 
                 running = false;
+
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_SPACE)
+                    cout << "Spacebar pressed!\n";
             }
         }
         SDL_Delay(16); // ~60 FPS delay
