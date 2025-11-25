@@ -48,5 +48,6 @@
         "variant": "cpp",
         "vector": "cpp",
         "__config": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }
