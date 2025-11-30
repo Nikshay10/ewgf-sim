@@ -5,12 +5,66 @@
 
 using namespace std;
 
-int main() {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        cerr << "SDL_Init Error: " << SDL_GetError() << endl;
-        return 1;
-    }
+struct DirectionalTextures{
+    SDL_Texture* u;
+    SDL_Texture* d;
+    SDL_Texture* f;
+    SDL_Texture* b;
+    SDL_Texture* ub;
+    SDL_Texture* uf;
+    SDL_Texture* df;
+    SDL_Texture* db;
+    SDL_Texture* two;
+};
 
+SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer){
+    SDL_Surface* surface = IMG_Load(path);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
+DirectionalTextures loadTextures(SDL_Renderer* renderer){
+    DirectionalTextures textures;
+    
+    textures.u = loadTexture("tekken/u.png", renderer);
+    textures.d = loadTexture("tekken/d.png", renderer);
+    textures.f = loadTexture("tekken/f.png", renderer);
+    textures.b = loadTexture("tekken/b.png", renderer);
+    textures.ub = loadTexture("tekken/ub.png", renderer);
+    textures.uf = loadTexture("tekken/uf.png", renderer);
+    textures.df = loadTexture("tekken/df.png", renderer);
+    textures.db = loadTexture("tekken/db.png", renderer);
+    textures.two = loadTexture("tekken/2.png", renderer);
+
+    return textures;
+}
+
+int getDirection(const Uint8* keys){
+    bool u = keys[SDL_SCANCODE_W];      // The tekken directional numpad
+    bool b = keys[SDL_SCANCODE_A];      //          7 8 9
+    bool d = keys[SDL_SCANCODE_S];      //          4 5 6
+    bool f = keys[SDL_SCANCODE_D];      //          1 2 3
+
+    // Need to check diagonals first so that they dont get skipped right after reaching cardinal input
+    if(d && b) return 1;
+    if(d && f) return 3;
+    if(u && b) return 7;
+    if(u && f) return 9;
+
+    // Neutral
+    if(!u && !d && !b && !f) return 5;
+
+    // Cardinal directions
+    if(d) return 2;
+    if(b) return 4;
+    if(f) return 6;
+    if(u) return 8;
+
+    return 5;
+}
+
+int main() {
     SDL_Window* window = SDL_CreateWindow(
         "ewgf sim",               
         SDL_WINDOWPOS_CENTERED,      
@@ -21,78 +75,43 @@ int main() {
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-    SDL_Surface* up =  IMG_Load("tekken/u.png");
-    SDL_Surface* back = IMG_Load("tekken/b.png");
-    SDL_Surface* front = IMG_Load("tekken/f.png");
-    SDL_Surface* down = IMG_Load("tekken/d.png");
-    SDL_Surface* Two = IMG_Load("tekken/2.png");
-  
-
-    SDL_Texture* u = SDL_CreateTextureFromSurface(renderer, up);
-    SDL_Texture* d = SDL_CreateTextureFromSurface(renderer, down);
-    SDL_Texture* f = SDL_CreateTextureFromSurface(renderer, front);
-    SDL_Texture* b = SDL_CreateTextureFromSurface(renderer, back);
-    SDL_Texture* two = SDL_CreateTextureFromSurface(renderer, Two);
-    SDL_FreeSurface(up);
-    SDL_FreeSurface(down);
-    SDL_FreeSurface(front);
-    SDL_FreeSurface(back);
-    SDL_FreeSurface(Two);
-
-    vector<SDL_Texture*> textures = {u, d, b, f, two};
+    DirectionalTextures textures = loadTextures(renderer);
 
     SDL_Event event;
     bool running = true;
-    bool showImage = false;
 
-    map<int, bool> keyMap = {{119,false},
-                                {97,false},
-                                {115,false},
-                                {100,false},
-                                {105,false},};
+    const Uint8* keyboardState = SDL_GetKeyboardState(NULL);
 
     while (running) {
+        SDL_PumpEvents();
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) 
                 running = false;
-
-            if (event.type == SDL_KEYDOWN) {
-                keyMap[event.key.keysym.sym] = true;
-                cout << event.key.keysym.sym << endl;
-            }
-
-            if (event.type == SDL_KEYUP) {
-                keyMap[event.key.keysym.sym] = false;
-                cout << event.key.keysym.sym << endl;
-            }
         }
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+        SDL_Rect r;
+        r.w = 200;
+        r.h = 200;
+        r.x = (800 - r.w) / 2;
+        r.y = (600 - r.h) / 2;
 
-        if (keyMap[119]) {
-            SDL_Rect destRect = { 200, 150, 400, 300 }; 
-            SDL_RenderCopy(renderer, u, NULL, &destRect);
-        }
-        if (keyMap[97]) {
-            SDL_Rect destRect = { 200, 150, 400, 300 }; 
-            SDL_RenderCopy(renderer, b, NULL, &destRect);
-        }
-        if (keyMap[115]) {
-            SDL_Rect destRect = { 200, 150, 400, 300 }; 
-            SDL_RenderCopy(renderer, d, NULL, &destRect);
-        }
-        if (keyMap[100]) {
-            SDL_Rect destRect = { 200, 150, 400, 300 }; 
-            SDL_RenderCopy(renderer, f, NULL, &destRect);
-        }
-        if (keyMap[105]) {
-            SDL_Rect destRect = { 200, 150, 400, 300 }; 
-            SDL_RenderCopy(renderer, two, NULL, &destRect);
+        int direction = getDirection(keyboardState);
+
+        switch(direction){ // Switch case for each direction
+            case 1: SDL_RenderCopy(renderer, textures.db, NULL, &r); break;
+            case 2: SDL_RenderCopy(renderer, textures.d, NULL, &r); break;
+            case 3: SDL_RenderCopy(renderer, textures.df, NULL, &r); break;
+            case 4: SDL_RenderCopy(renderer, textures.b, NULL, &r); break;
+            case 6: SDL_RenderCopy(renderer, textures.f, NULL, &r); break;
+            case 7: SDL_RenderCopy(renderer, textures.ub, NULL, &r); break;
+            case 8: SDL_RenderCopy(renderer, textures.u, NULL, &r); break;
+            case 9: SDL_RenderCopy(renderer, textures.uf, NULL, &r); break;
         }
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(16); // ~60 FPS delay
+        SDL_Delay(16); // To run the loop in 60 frames per second
     }
 
     SDL_DestroyRenderer(renderer);
@@ -101,3 +120,4 @@ int main() {
     SDL_Quit();
     return 0;
 }
+
