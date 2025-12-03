@@ -17,6 +17,70 @@ struct DirectionalTextures{
     SDL_Texture* two;
 };
 
+struct EWGFState{
+    int state = 0;
+    int frame = 0;
+    int dfStart = -1;
+    bool ewgf = false;
+};
+
+EWGFState ewgfState;
+
+bool isF(int d)  { return d == 6; }
+bool isN(int d)  { return d == 5; }
+bool isD(int d)  { return d == 2; }
+bool isDF(int d) { return d == 3; }
+
+void updateEWGF(int direction, bool two){
+    ewgfState.ewgf = false;
+    ewgfState.frame++;
+
+    switch(ewgfState.state){
+        case 0: // Forward tap
+            if(isF(direction)){ 
+                ewgfState.state = 1;
+                ewgfState.frame = 0;
+            }
+            break;
+        case 1: // Forward window 
+            if(isN(direction)){ 
+                ewgfState.state = 2;
+                ewgfState.frame = 0;
+                
+            }
+            else if(!isF(direction)){ // Checking for any direction other than neutral or forward
+                ewgfState.state = 0;
+            }
+            break;
+        case 2: // Neutral window
+            if (ewgfState.frame > 2) {
+                ewgfState.state = 0; // too slow
+                break;
+            }
+            if (isD(direction)) {
+                ewgfState.state = 3;
+                ewgfState.frame = 0;
+            }
+            break;
+        case 3: // downforward window
+            if(ewgfState.frame > 4){ // too slow
+                ewgfState.state = 0;
+                break;
+            }
+            if(isDF(direction)){
+                ewgfState.dfStart = ewgfState.frame;
+                ewgfState.state = 4;
+                ewgfState.frame = 0;
+            }
+            break;
+        case 4:
+            if(two && ewgfState.dfStart <=2)
+                ewgfState.ewgf = true;
+            ewgfState.state = 0;
+            break;
+    }
+}
+
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer){
     SDL_Surface* surface = IMG_Load(path);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -62,6 +126,14 @@ int getDirection(const Uint8* keys){
     if(u) return 8;
 
     return 5;
+}
+
+int getFace(const Uint8* keys){
+    bool two = keys[SDL_SCANCODE_I];
+
+    if(two) return 2;
+
+    return 0;
 }
 
 int main() {
@@ -110,8 +182,11 @@ int main() {
             case 9: SDL_RenderCopy(renderer, textures.uf, NULL, &r); break;
         }
 
+        updateEWGF(direction, getFace(keyboardState));
+        if(ewgfState.ewgf) cout << "EWGf";
+
         SDL_RenderPresent(renderer);
-        SDL_Delay(16); // To run the loop in 60 frames per second
+        SDL_Delay(16); // To run the loop at 60 frames per second
     }
 
     SDL_DestroyRenderer(renderer);
@@ -120,4 +195,3 @@ int main() {
     SDL_Quit();
     return 0;
 }
-
